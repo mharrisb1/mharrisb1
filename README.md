@@ -6,7 +6,7 @@ Currently working full-time at [Definite](https://definite.app) building an [Ana
 
 Socials:
 
-- [GitHub](https://github.com/mharrib1)
+- [GitHub](https://github.com/mharrisb1)
 - [LinkedIn](https://linkedin.com/in/mharrisb1)
 
 <!-- TODO -->
