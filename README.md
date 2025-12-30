@@ -1,6 +1,6 @@
 ### Michael Harris
 
-I've worked on a lot of data stuff. Analyst -> DS -> DE -> SWE
+I build data stuff. Analyst -> DS -> DE -> SWE
 
 Currently working full-time at [Definite](https://definite.app) building an [Analyst-in-a-Box](https://www.definite.app/fi).
 
