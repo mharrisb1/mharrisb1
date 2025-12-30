@@ -1,14 +1,14 @@
-### Michael Harris
+## Michael Harris
 
 I build data stuff.
 
-Career:
+### Career
 
 Analyst -> DS -> DE -> SWE
 
 Currently working full-time at [Definite](https://definite.app) building an [Analyst-in-a-Box](https://www.definite.app/fi).
 
-Socials:
+### Socials
 
 - [GitHub](https://github.com/mharrisb1)
 - [LinkedIn](https://linkedin.com/in/mharrisb1)
