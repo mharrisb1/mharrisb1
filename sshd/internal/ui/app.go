@@ -305,7 +305,7 @@ func (m Model) View() string {
 // viewList renders the post list view
 func (m Model) viewList() string {
 	var content strings.Builder
-	contentWidth := 120
+	contentWidth := 81
 
 	// Header
 	content.WriteString(titleStyle.Render("Michael Harris - Blog") + "\n")
