@@ -1,20 +1,14 @@
 ## Michael Harris
 
-I build data stuff.
-
-### Career
-
-Analyst -> DS -> DE -> SWE
-
-Currently working full-time at [Definite](https://definite.app) building an [Analyst-in-a-Box](https://www.definite.app/fi).
+Currently full-time at [Definite](https://definite.app) building a [vertically integrated analytics platform](https://www.definite.app/product) that powers our [AI data analyst](https://www.definite.app/fi)
 
 ### Socials
 
 - [GitHub](https://github.com/mharrisb1)
 - [LinkedIn](https://linkedin.com/in/mharrisb1)
 
-<!-- TODO -->
-<!-- Additional info and my blog are available at: -->
+<!-- TODO: Coming soon! -->
+<!-- ### Blog -->
 
 <!-- ```bash -->
 <!-- ssh mharrisb1.dev -->
