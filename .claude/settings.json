@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(*)"
+    ]
+  },
+  "outputStyle": "Learning",
+  "statusLine": {
+    "type": "command",
+    "command": "printf '%s@%s:%s' \"$(whoami)\" \"$(hostname -s)\" \"$(basename \"$(pwd)\")\""
+  }
+}
