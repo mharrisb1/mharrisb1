@@ -290,6 +290,17 @@ func divider(width int) string {
 	return dividerStyle.Render(strings.Repeat("─", width))
 }
 
+// truncate shortens a string to maxLen, adding "..." if truncated
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	if maxLen <= 3 {
+		return s[:maxLen]
+	}
+	return s[:maxLen-3] + "..."
+}
+
 // View implements tea.Model
 func (m Model) View() string {
 	switch m.mode {
@@ -307,35 +318,94 @@ func (m Model) viewList() string {
 	var content strings.Builder
 	contentWidth := 81
 
+	// Calculate available height for posts
+	// Box has: border (2) + padding (2) = 4 lines overhead
+	// Header: title (1) + divider (1) + blank (1) = 3 lines
+	// Footer: divider (1) + footer text (1) = 2 lines
+	// Each post: title (1) + meta (1) + summary (1) + blank (1) = 4 lines
+	boxOverhead := 4
+	headerLines := 3
+	footerLines := 2
+	linesPerPost := 4
+
+	availableHeight := m.height - boxOverhead - headerLines - footerLines
+	if availableHeight < linesPerPost {
+		availableHeight = linesPerPost // Show at least one post
+	}
+
+	maxVisiblePosts := availableHeight / linesPerPost
+	if maxVisiblePosts < 1 {
+		maxVisiblePosts = 1
+	}
+
+	// Calculate window of visible posts
+	startIdx := 0
+	endIdx := len(m.posts)
+
+	if len(m.posts) > maxVisiblePosts {
+		// Center the cursor in the visible window when possible
+		halfWindow := maxVisiblePosts / 2
+		startIdx = m.cursor - halfWindow
+		if startIdx < 0 {
+			startIdx = 0
+		}
+		endIdx = startIdx + maxVisiblePosts
+		if endIdx > len(m.posts) {
+			endIdx = len(m.posts)
+			startIdx = endIdx - maxVisiblePosts
+			if startIdx < 0 {
+				startIdx = 0
+			}
+		}
+	}
+
 	// Header
 	content.WriteString(titleStyle.Render("Michael Harris - Blog") + "\n")
 	content.WriteString(divider(contentWidth) + "\n\n")
 
-	// Posts
-	for i, post := range m.posts {
+	// Show scroll indicator at top if there are hidden posts above
+	if startIdx > 0 {
+		content.WriteString(dimStyle.Render(fmt.Sprintf("  ↑ %d more above", startIdx)) + "\n\n")
+	}
+
+	// Posts (only visible window)
+	// Max text width accounts for cursor/indent prefix (2 chars)
+	maxTextWidth := contentWidth - 2
+
+	for i := startIdx; i < endIdx; i++ {
+		post := m.posts[i]
+
 		// Cursor indicator
 		cursor := "  "
 		if i == m.cursor {
 			cursor = "> "
 		}
 
-		// Title
+		// Title (truncated)
+		titleText := truncate(post.Title, maxTextWidth)
 		var title string
 		if i == m.cursor {
-			title = selectedStyle.Render(post.Title)
+			title = selectedStyle.Render(titleText)
 		} else {
-			title = normalStyle.Render(post.Title)
+			title = normalStyle.Render(titleText)
 		}
 
 		content.WriteString(cursor + title + "\n")
 
-		// Date and tags
-		content.WriteString("  " + dimStyle.Render(post.FormattedDate()+" • "+post.TagString()) + "\n")
+		// Date and tags (truncated)
+		meta := truncate(post.FormattedDate()+" • "+post.TagString(), maxTextWidth)
+		content.WriteString("  " + dimStyle.Render(meta) + "\n")
 
-		// Summary
-		content.WriteString("  " + dimStyle.Render(post.Summary) + "\n")
+		// Summary (truncated)
+		summary := truncate(post.Summary, maxTextWidth)
+		content.WriteString("  " + dimStyle.Render(summary) + "\n")
 
 		content.WriteString("\n")
+	}
+
+	// Show scroll indicator at bottom if there are hidden posts below
+	if endIdx < len(m.posts) {
+		content.WriteString(dimStyle.Render(fmt.Sprintf("  ↓ %d more below", len(m.posts)-endIdx)) + "\n")
 	}
 
 	// Footer
@@ -396,37 +466,94 @@ func (m Model) viewReader() string {
 // viewSearch renders the search view
 func (m Model) viewSearch() string {
 	var content strings.Builder
-	contentWidth := 120
+	contentWidth := 81
+
+	// Calculate available height for search results
+	// Box has: border (2) + padding (2) = 4 lines overhead
+	// Header: search input (1) + divider (1) + blank (1) = 3 lines
+	// Footer: divider (1) + footer text (1) = 2 lines
+	// Each result: title (1) + meta (1) + blank (1) = 3 lines
+	boxOverhead := 4
+	headerLines := 3
+	footerLines := 2
+	linesPerResult := 3
+
+	availableHeight := m.height - boxOverhead - headerLines - footerLines
+	if availableHeight < linesPerResult {
+		availableHeight = linesPerResult
+	}
+
+	maxVisibleResults := availableHeight / linesPerResult
+	if maxVisibleResults < 1 {
+		maxVisibleResults = 1
+	}
+
+	// Calculate window of visible results
+	startIdx := 0
+	endIdx := len(m.searchResults)
+
+	if len(m.searchResults) > maxVisibleResults {
+		halfWindow := maxVisibleResults / 2
+		startIdx = m.searchCursor - halfWindow
+		if startIdx < 0 {
+			startIdx = 0
+		}
+		endIdx = startIdx + maxVisibleResults
+		if endIdx > len(m.searchResults) {
+			endIdx = len(m.searchResults)
+			startIdx = endIdx - maxVisibleResults
+			if startIdx < 0 {
+				startIdx = 0
+			}
+		}
+	}
 
 	// Search input header
 	content.WriteString(titleStyle.Render("Search: ") + m.searchInput.View() + "\n")
 	content.WriteString(divider(contentWidth) + "\n\n")
 
 	// Search results
+	// Max text width accounts for cursor/indent prefix (2 chars)
+	maxTextWidth := contentWidth - 2
+
 	if len(m.searchResults) == 0 {
 		content.WriteString(dimStyle.Render("  No posts found") + "\n")
 	} else {
-		for i, post := range m.searchResults {
+		// Show scroll indicator at top if there are hidden results above
+		if startIdx > 0 {
+			content.WriteString(dimStyle.Render(fmt.Sprintf("  ↑ %d more above", startIdx)) + "\n\n")
+		}
+
+		for i := startIdx; i < endIdx; i++ {
+			post := m.searchResults[i]
+
 			// Cursor indicator
 			cursor := "  "
 			if i == m.searchCursor {
 				cursor = "> "
 			}
 
-			// Title
+			// Title (truncated)
+			titleText := truncate(post.Title, maxTextWidth)
 			var title string
 			if i == m.searchCursor {
-				title = selectedStyle.Render(post.Title)
+				title = selectedStyle.Render(titleText)
 			} else {
-				title = normalStyle.Render(post.Title)
+				title = normalStyle.Render(titleText)
 			}
 
 			content.WriteString(cursor + title + "\n")
 
-			// Date and tags
-			content.WriteString("  " + dimStyle.Render(post.FormattedDate()+" • "+post.TagString()) + "\n")
+			// Date and tags (truncated)
+			meta := truncate(post.FormattedDate()+" • "+post.TagString(), maxTextWidth)
+			content.WriteString("  " + dimStyle.Render(meta) + "\n")
 
 			content.WriteString("\n")
+		}
+
+		// Show scroll indicator at bottom if there are hidden results below
+		if endIdx < len(m.searchResults) {
+			content.WriteString(dimStyle.Render(fmt.Sprintf("  ↓ %d more below", len(m.searchResults)-endIdx)) + "\n")
 		}
 	}
 
