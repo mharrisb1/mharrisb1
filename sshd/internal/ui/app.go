@@ -218,9 +218,12 @@ func (m Model) updateSearch(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// Update text input and filter results
+	prev := m.searchInput.Value()
 	m.searchInput, cmd = m.searchInput.Update(msg)
-	m.searchResults = m.filterPosts(m.searchInput.Value())
-	m.searchCursor = 0 // Reset cursor when results change
+	if m.searchInput.Value() != prev {
+		m.searchResults = m.filterPosts(m.searchInput.Value())
+		m.searchCursor = 0
+	}
 
 	return m, cmd
 }
