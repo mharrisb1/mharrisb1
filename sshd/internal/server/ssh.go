@@ -13,12 +13,12 @@ import (
 
 // NewSSHServer creates a new SSH server configured to serve the blog TUI
 // No auth handlers = NoClientAuth is automatically enabled (public access)
-func NewSSHServer(loadedPosts []posts.Post, host string, port int) (*ssh.Server, error) {
+func NewSSHServer(loadedPosts []posts.Post, aboutContent string, host string, port int) (*ssh.Server, error) {
 	s, err := wish.NewServer(
 		wish.WithAddress(fmt.Sprintf("%s:%d", host, port)),
 		wish.WithHostKeyPath(".ssh/blog_host_key"),
 		wish.WithMiddleware(
-			bubbletea.Middleware(teaHandler(loadedPosts)),
+			bubbletea.Middleware(teaHandler(loadedPosts, aboutContent)),
 		),
 	)
 	if err != nil {
@@ -29,13 +29,13 @@ func NewSSHServer(loadedPosts []posts.Post, host string, port int) (*ssh.Server,
 }
 
 // teaHandler returns a function that creates a new TUI for each SSH session
-func teaHandler(loadedPosts []posts.Post) func(ssh.Session) (tea.Model, []tea.ProgramOption) {
+func teaHandler(loadedPosts []posts.Post, aboutContent string) func(ssh.Session) (tea.Model, []tea.ProgramOption) {
 	return func(s ssh.Session) (tea.Model, []tea.ProgramOption) {
 		// Get terminal size from SSH session
 		pty, _, _ := s.Pty()
 
 		// Create a fresh model for this session
-		m := ui.NewModel(loadedPosts)
+		m := ui.NewModel(loadedPosts, aboutContent)
 
 		// Update model with actual terminal dimensions
 		m = m.WithDimensions(pty.Window.Width, pty.Window.Height)

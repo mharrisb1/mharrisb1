@@ -22,9 +22,15 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Load about page
+	aboutPage, err := posts.LoadPage("./content/about.md")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not load about page: %v\n", err)
+	}
+
 	// Create and run the TUI
 	p := tea.NewProgram(
-		ui.NewModel(loadedPosts),
+		ui.NewModel(loadedPosts, aboutPage.Content),
 		tea.WithAltScreen(),
 	)
 

@@ -11,6 +11,35 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Page represents a standalone content page (e.g., about.md)
+type Page struct {
+	Title   string `yaml:"title"`
+	Content string
+}
+
+// LoadPage reads a markdown file with optional YAML frontmatter
+func LoadPage(path string) (Page, error) {
+	var page Page
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return page, fmt.Errorf("reading %s: %w", path, err)
+	}
+
+	parts := bytes.SplitN(data, []byte("---"), 3)
+	if len(parts) < 3 {
+		// No frontmatter — treat entire file as content
+		page.Content = strings.TrimSpace(string(data))
+		return page, nil
+	}
+
+	page.Content = strings.TrimSpace(string(parts[2]))
+	if err := yaml.Unmarshal(parts[1], &page); err != nil {
+		return page, fmt.Errorf("parsing %s: %w", path, err)
+	}
+
+	return page, nil
+}
+
 func LoadPosts(dir string) ([]Post, error) {
 	posts := []Post{}
 	entries, err := os.ReadDir(dir)

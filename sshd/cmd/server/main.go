@@ -20,13 +20,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Load about page
+	aboutPage, err := posts.LoadPage("./content/about.md")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not load about page: %v\n", err)
+	}
+
 	fmt.Printf("Loaded %d posts\n", len(loadedPosts))
 
 	// Create SSH server on port 2223 (use 22 in production)
 	port := 2223
 	host := "0.0.0.0"
 
-	s, err := server.NewSSHServer(loadedPosts, host, port)
+	s, err := server.NewSSHServer(loadedPosts, aboutPage.Content, host, port)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error creating server: %v\n", err)
 		os.Exit(1)

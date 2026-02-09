@@ -21,49 +21,55 @@ const (
 	ViewModeSearch
 )
 
+// Tab represents the active top-level tab
+type Tab int
+
+const (
+	TabAbout Tab = iota
+	TabPosts
+)
+
 // Model holds all application state
 type Model struct {
-	posts  []posts.Post
-	mode   ViewMode
-	cursor int
+	posts     []posts.Post
+	mode      ViewMode
+	activeTab Tab
+	cursor    int
 
 	// Reader view
 	viewport    viewport.Model
 	currentPost *posts.Post
+
+	// About view
+	aboutContent  string
+	aboutViewport viewport.Model
+	aboutReady    bool
 
 	// Search view
 	searchInput   textinput.Model
 	searchResults []posts.Post
 	searchCursor  int
 
-	// Markdown renderer (created once, reused)
-	mdRenderer *glamour.TermRenderer
-
 	// Terminal dimensions
 	width  int
 	height int
 }
 
-// NewModel creates a new Model with the given posts
-func NewModel(p []posts.Post) Model {
-	// Create markdown renderer once (expensive operation)
-	renderer, _ := glamour.NewTermRenderer(
-		glamour.WithStylePath("dark"),
-		glamour.WithWordWrap(120),
-	)
-
+// NewModel creates a new Model with the given posts and about page content
+func NewModel(p []posts.Post, aboutContent string) Model {
 	// Create search input
 	ti := textinput.New()
 	ti.CharLimit = 50
 
 	return Model{
-		posts:       p,
-		mode:        ViewModeList,
-		cursor:      0,
-		width:       80,
-		height:      24,
-		mdRenderer:  renderer,
-		searchInput: ti,
+		posts:        p,
+		mode:         ViewModeList,
+		activeTab:    TabAbout,
+		cursor:       0,
+		aboutContent: aboutContent,
+		width:        80,
+		height:       24,
+		searchInput:  ti,
 	}
 }
 
@@ -93,12 +99,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		// Update viewport size when window resizes
-		m.viewport.Width = msg.Width - 10
-		m.viewport.Height = msg.Height - 12
+		// Update viewport sizes when window resizes
+		m.viewport.Width = m.contentWidth(maxReaderWidth)
+		m.viewport.Height = m.viewportHeight(7)
+		m.aboutViewport.Width = m.contentWidth(maxListWidth)
+		m.aboutViewport.Height = m.viewportHeight(6)
 	}
 
-	// Handle mode-specific updates
+	// Route based on active tab
+	if m.activeTab == TabAbout && m.mode == ViewModeList {
+		return m.updateAbout(msg)
+	}
+
+	// Posts tab: route by view mode
 	switch m.mode {
 	case ViewModeList:
 		return m.updateList(msg)
@@ -111,6 +124,36 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
+// updateAbout handles input in the About tab
+func (m Model) updateAbout(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
+	// Initialize viewport on first display
+	if !m.aboutReady {
+		m.aboutViewport = viewport.New(m.contentWidth(maxListWidth), m.viewportHeight(6))
+		content, err := renderMarkdown(m.aboutContent, m.contentWidth(maxListWidth))
+		if err != nil {
+			content = m.aboutContent
+		}
+		m.aboutViewport.SetContent(content)
+		m.aboutReady = true
+	}
+
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "q":
+			return m, tea.Quit
+		case "right", "2":
+			m.activeTab = TabPosts
+			return m, nil
+		}
+	}
+
+	m.aboutViewport, cmd = m.aboutViewport.Update(msg)
+	return m, cmd
+}
+
 // updateList handles input in list view
 func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -118,6 +161,10 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "q":
 			return m, tea.Quit
+
+		case "left", "1":
+			m.activeTab = TabAbout
+			return m, nil
 
 		case "up", "k":
 			if m.cursor > 0 {
@@ -135,11 +182,11 @@ func (m Model) updateList(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.mode = ViewModeReader
 
 			// Render markdown and set viewport content
-			content, err := m.renderMarkdown(m.currentPost.Content)
+			content, err := renderMarkdown(m.currentPost.Content, m.contentWidth(maxReaderWidth))
 			if err != nil {
 				content = m.currentPost.Content // fallback to raw content
 			}
-			m.viewport = viewport.New(m.width-10, m.height-12)
+			m.viewport = viewport.New(m.contentWidth(maxReaderWidth), m.viewportHeight(7))
 			m.viewport.SetContent(content)
 
 		case "/":
@@ -206,11 +253,11 @@ func (m Model) updateSearch(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.currentPost = &m.searchResults[m.searchCursor]
 				m.mode = ViewModeReader
 
-				content, err := m.renderMarkdown(m.currentPost.Content)
+				content, err := renderMarkdown(m.currentPost.Content, m.contentWidth(maxReaderWidth))
 				if err != nil {
 					content = m.currentPost.Content
 				}
-				m.viewport = viewport.New(m.width-10, m.height-12)
+				m.viewport = viewport.New(m.contentWidth(maxReaderWidth), m.viewportHeight(7))
 				m.viewport.SetContent(content)
 			}
 			return m, nil
@@ -250,12 +297,55 @@ func (m Model) filterPosts(query string) []posts.Post {
 	return results
 }
 
-// renderMarkdown converts markdown to styled terminal output
-func (m Model) renderMarkdown(content string) (string, error) {
-	if m.mdRenderer == nil {
-		return content, nil // fallback to raw content
+// renderMarkdown converts markdown to styled terminal output at the given wrap width
+func renderMarkdown(content string, wrapWidth int) (string, error) {
+	renderer, err := glamour.NewTermRenderer(
+		glamour.WithStylePath("dark"),
+		glamour.WithWordWrap(wrapWidth),
+	)
+	if err != nil {
+		return content, err
 	}
-	return m.mdRenderer.Render(content)
+	return renderer.Render(content)
+}
+
+// Layout constants
+const (
+	maxListWidth   = 81
+	maxReaderWidth = 120
+	maxHeight      = 48
+	boxHOverhead   = 6 // border(2) + padding(4)
+	boxVOverhead   = 4 // border(2) + padding(2)
+)
+
+// contentWidth returns the usable content width inside the box, capped at max
+func (m Model) contentWidth(max int) int {
+	w := m.width - boxHOverhead
+	if w > max {
+		w = max
+	}
+	if w < 20 {
+		w = 20
+	}
+	return w
+}
+
+// boxHeight returns the effective terminal height, capped at maxHeight
+func (m Model) boxHeight() int {
+	h := m.height
+	if h > maxHeight {
+		h = maxHeight
+	}
+	return h
+}
+
+// viewportHeight returns the available height for a viewport given lines used by header/footer
+func (m Model) viewportHeight(nonViewportLines int) int {
+	h := m.boxHeight() - boxVOverhead - nonViewportLines
+	if h < 1 {
+		h = 1
+	}
+	return h
 }
 
 // Styles
@@ -286,6 +376,13 @@ var (
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(accentColor).
 			Padding(1, 2)
+
+	activeTabStyle = lipgloss.NewStyle().
+			Bold(true).
+			Foreground(accentColor)
+
+	inactiveTabStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("242"))
 )
 
 // divider creates a horizontal line of the given width
@@ -304,8 +401,26 @@ func truncate(s string, maxLen int) string {
 	return s[:maxLen-3] + "..."
 }
 
+// renderTabBar renders the tab bar with the active tab highlighted
+func (m Model) renderTabBar() string {
+	about := "[1: About]"
+	posts := "[2: Posts]"
+	if m.activeTab == TabAbout {
+		about = activeTabStyle.Render(about)
+		posts = inactiveTabStyle.Render(posts)
+	} else {
+		about = inactiveTabStyle.Render(about)
+		posts = activeTabStyle.Render(posts)
+	}
+	return about + "  " + posts
+}
+
 // View implements tea.Model
 func (m Model) View() string {
+	if m.activeTab == TabAbout && m.mode == ViewModeList {
+		return m.viewAbout()
+	}
+
 	switch m.mode {
 	case ViewModeReader:
 		return m.viewReader()
@@ -316,10 +431,39 @@ func (m Model) View() string {
 	}
 }
 
+// viewAbout renders the about page
+func (m Model) viewAbout() string {
+	var content strings.Builder
+	contentWidth := m.contentWidth(maxListWidth)
+
+	// Header: tab bar + divider
+	content.WriteString(m.renderTabBar() + "\n")
+	content.WriteString(divider(contentWidth) + "\n\n")
+
+	// About content in viewport
+	content.WriteString(m.aboutViewport.View())
+	content.WriteString("\n\n")
+
+	// Footer
+	content.WriteString(divider(contentWidth) + "\n")
+	scrollPercent := fmt.Sprintf("%3.f%%", m.aboutViewport.ScrollPercent()*100)
+	content.WriteString(footerStyle.Render("↑/↓: scroll  →/2: posts  q: quit  " + scrollPercent))
+
+	box := boxStyle.Render(content.String())
+
+	return lipgloss.Place(
+		m.width,
+		m.height,
+		lipgloss.Center,
+		lipgloss.Center,
+		box,
+	)
+}
+
 // viewList renders the post list view
 func (m Model) viewList() string {
 	var content strings.Builder
-	contentWidth := 81
+	contentWidth := m.contentWidth(maxListWidth)
 
 	// Calculate available height for posts
 	// Box has: border (2) + padding (2) = 4 lines overhead
@@ -331,7 +475,7 @@ func (m Model) viewList() string {
 	footerLines := 2
 	linesPerPost := 4
 
-	availableHeight := m.height - boxOverhead - headerLines - footerLines
+	availableHeight := m.boxHeight() - boxOverhead - headerLines - footerLines
 	if availableHeight < linesPerPost {
 		availableHeight = linesPerPost // Show at least one post
 	}
@@ -363,7 +507,7 @@ func (m Model) viewList() string {
 	}
 
 	// Header
-	content.WriteString(titleStyle.Render("Michael Harris - Blog") + "\n")
+	content.WriteString(m.renderTabBar() + "\n")
 	content.WriteString(divider(contentWidth) + "\n\n")
 
 	// Show scroll indicator at top if there are hidden posts above
@@ -413,7 +557,7 @@ func (m Model) viewList() string {
 
 	// Footer
 	content.WriteString(divider(contentWidth) + "\n")
-	content.WriteString(footerStyle.Render("↑/↓: navigate  enter: read  /: search  q: quit"))
+	content.WriteString(footerStyle.Render("↑/↓: navigate  enter: read  /: search  ←/1: about  q: quit"))
 
 	// Wrap content in a styled box
 	box := boxStyle.Render(content.String())
@@ -435,7 +579,7 @@ func (m Model) viewReader() string {
 	}
 
 	var content strings.Builder
-	contentWidth := 120
+	contentWidth := m.contentWidth(maxReaderWidth)
 
 	// Header with post title
 	content.WriteString(titleStyle.Render(m.currentPost.Title) + "\n")
@@ -469,7 +613,7 @@ func (m Model) viewReader() string {
 // viewSearch renders the search view
 func (m Model) viewSearch() string {
 	var content strings.Builder
-	contentWidth := 81
+	contentWidth := m.contentWidth(maxListWidth)
 
 	// Calculate available height for search results
 	// Box has: border (2) + padding (2) = 4 lines overhead
@@ -481,7 +625,7 @@ func (m Model) viewSearch() string {
 	footerLines := 2
 	linesPerResult := 3
 
-	availableHeight := m.height - boxOverhead - headerLines - footerLines
+	availableHeight := m.boxHeight() - boxOverhead - headerLines - footerLines
 	if availableHeight < linesPerResult {
 		availableHeight = linesPerResult
 	}
