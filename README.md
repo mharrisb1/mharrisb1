@@ -6,10 +6,3 @@ Find me in real-life:
 
 - [🏔️ Denver C++ Meetup](https://www.meetup.com/north-denver-metro-c-meetup)
 - [🛠️ DenHac - Denver Hackerspace](https://denhac.org)
-
-<!-- TODO: Coming soon! -->
-<!-- ### Blog -->
-
-<!-- ```bash -->
-<!-- ssh mharrisb1.dev -->
-<!-- ``` -->
