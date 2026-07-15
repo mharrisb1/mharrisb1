@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mharrisb1.dev</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
+    <link rel="stylesheet" href="/styles/index.css" />
+    <script type="module" src="/components/clock.js"></script>
+    <script type="module" src="/components/menu.js"></script>
+    <script type="module" src="/components/content-window.js"></script>
+  </head>
+  <body>
+    <div class="bg-primary flex">
+      <div class="bg-accent px-2 py-1 font-bold">mharrisb1.dev</div>
+    </div>
+    <div id="content" class="flex-1 flex justify-center items-center">
+      <app-menu id="menu" class="w-1/3 border px-12 py-8 space-y-6"> </app-menu>
+    </div>
+    <div class="bg-primary flex justify-between">
+      <div class="px-2 py-1">NOR</div>
+      <app-clock id="clock" class="bg-accent px-2 py-1"></app-clock>
+    </div>
+    <script>
+      const contentDiv = document.getElementById("content");
+
+      const renderRoute = () => {
+        const path = window.location.hash.replace(/^#/, "") || "/";
+
+        if (path === "/about") {
+          document.title = "About | mharrisb1.dev";
+          contentDiv.innerHTML = `<content-window class="w-3/4 flex flex-col" src="/content/about.html"></content-window>`;
+        } else if (path.startsWith("/blog/")) {
+          const slug = path.split('/').pop();
+          document.title = `${slug} | mharrisb1.dev`;
+          contentDiv.innerHTML = `<content-window class="w-3/4 flex flex-col" src="/content${path}.html"></content-window>`;
+        } else {
+          document.title = "mharrisb1.dev";
+          contentDiv.innerHTML = `<app-menu id="menu" class="w-1/3 border px-12 py-8 space-y-6"></app-menu>`;
+        }
+      };
+
+      document.addEventListener("navigate", (e) => {
+        const path = e.detail.path || "/";
+        if (window.location.hash === `#${path}`) {
+          renderRoute();
+        } else {
+          window.location.hash = path;
+        }
+      });
+
+      document.addEventListener("close-window", () => {
+        window.location.hash = "/";
+      });
+
+      window.addEventListener("hashchange", renderRoute);
+
+      // Initial load
+      renderRoute();
+    </script>
+  </body>
+</html>
