@@ -29,11 +29,11 @@
 
         if (path === "/about") {
           document.title = "About | mharrisb1.dev";
-          contentDiv.innerHTML = `<content-window class="w-3/4 flex flex-col" src="/content/about.html"></content-window>`;
+          contentDiv.innerHTML = `<content-window class="w-full h-full flex flex-col" style="align-self: stretch;" src="/content/about.html"></content-window>`;
         } else if (path.startsWith("/blog/")) {
           const slug = path.split('/').pop();
           document.title = `${slug} | mharrisb1.dev`;
-          contentDiv.innerHTML = `<content-window class="w-3/4 flex flex-col" src="/content${path}.html"></content-window>`;
+          contentDiv.innerHTML = `<content-window class="w-full h-full flex flex-col" style="align-self: stretch;" src="/content${path}.html"></content-window>`;
         } else {
           document.title = "mharrisb1.dev";
           contentDiv.innerHTML = `<app-menu id="menu" class="w-1/3 border px-12 py-8 space-y-6"></app-menu>`;

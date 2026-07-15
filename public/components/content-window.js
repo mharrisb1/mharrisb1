@@ -13,11 +13,13 @@ class ContentWindow extends HTMLElement {
 
   connectedCallback() {
     this.innerHTML = `
-      <div class="flex justify-end mb-2">
-        <button id="close-btn" class="text-secondary hover:text-white cursor-pointer font-bold">[X]</button>
-      </div>
-      <div class="border px-12 py-8">
-        <div id="ajax-content" class="text-primary">Loading...</div>
+      <div class="flex flex-col" style="margin: 0.5rem; width: calc(100% - 1rem); height: calc(100% - 1rem);">
+        <div class="flex justify-end mb-2">
+          <button id="close-btn" class="text-secondary hover:text-white cursor-pointer font-bold">[X]</button>
+        </div>
+        <div class="border px-12 py-8" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
+          <div id="ajax-content" class="text-primary">Loading...</div>
+        </div>
       </div>
     `;
 
