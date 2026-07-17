@@ -1,0 +1,9 @@
+[
+  {
+    "id": "faster-state-machines-in-js",
+    "title": "Faster State Machines in JavaScript",
+    "date": "2026-07-17",
+    "blurb": "Peaking under the hood of V8 through exploring common state machine implementation and their respective performance.",
+    "tags": ["javascript", "performance"]
+  }
+]
