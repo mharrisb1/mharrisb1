@@ -16,7 +16,8 @@ body {
   display: flex;
   flex-direction: column;
   margin: 0 12px;
-  min-height: 98dvh;
+  height: 98dvh;
+  overflow: hidden;
 }
 
 .w-full {
@@ -167,6 +168,10 @@ body {
 
 .justify-end {
   justify-content: flex-end;
+}
+
+a {
+  color: var(--color-blue);
 }
 
 button {
