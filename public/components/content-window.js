@@ -17,13 +17,16 @@ class ContentWindow extends HTMLElement {
         <div class="flex justify-end mb-2">
           <button id="close-btn" class="text-secondary hover:text-white cursor-pointer font-bold">[X]</button>
         </div>
-        <div class="border px-12 py-8" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
+        <div class="border px-4 py-2" style="overflow-y: auto; flex-grow: 1; min-height: 0;">
           <div id="ajax-content" class="text-primary">Loading...</div>
         </div>
       </div>
     `;
 
-    this.querySelector("#close-btn").addEventListener("click", this.handleClose);
+    this.querySelector("#close-btn").addEventListener(
+      "click",
+      this.handleClose,
+    );
     document.addEventListener("keydown", this.handleKeydown);
 
     if (this.hasAttribute("src")) {
@@ -42,7 +45,7 @@ class ContentWindow extends HTMLElement {
   async loadContent(src) {
     const container = this.querySelector("#ajax-content");
     if (!container) return;
-    
+
     container.innerHTML = "Loading...";
 
     if (contentCache.has(src)) {
@@ -59,7 +62,7 @@ class ContentWindow extends HTMLElement {
       } else {
         container.innerHTML = `<span class="text-accent">Failed to load content.</span>`;
       }
-    } catch (error) {
+    } catch (_) {
       container.innerHTML = `<span class="text-accent">Error loading content.</span>`;
     }
   }
@@ -71,7 +74,9 @@ class ContentWindow extends HTMLElement {
   }
 
   handleClose() {
-    this.dispatchEvent(new CustomEvent("close-window", { bubbles: true, composed: true }));
+    this.dispatchEvent(
+      new CustomEvent("close-window", { bubbles: true, composed: true }),
+    );
   }
 
   handleKeydown(e) {
