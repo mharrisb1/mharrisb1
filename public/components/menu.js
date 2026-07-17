@@ -8,6 +8,8 @@ class AppMenu extends HTMLElement {
     const key = e.key.toLowerCase();
     if (key === "a") {
       this.navigateTo("/about");
+    } else if (key === "b") {
+      this.navigateTo("/blog");
     } else if (key === "g") {
       const el = this.querySelector('a[href*="github.com"]');
       if (el) el.click();
@@ -21,11 +23,19 @@ class AppMenu extends HTMLElement {
     this.renderMenu();
     document.addEventListener("keydown", this.handleKeydown);
 
-    const aboutLink = this.querySelector('a[href="#"]');
+    const aboutLink = this.querySelector('a[data-path="/about"]');
     if (aboutLink) {
       aboutLink.addEventListener("click", (e) => {
         e.preventDefault();
         this.navigateTo("/about");
+      });
+    }
+    
+    const blogLink = this.querySelector('a[data-path="/blog"]');
+    if (blogLink) {
+      blogLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.navigateTo("/blog");
       });
     }
   }
@@ -45,11 +55,11 @@ class AppMenu extends HTMLElement {
   renderMenu() {
     this.innerHTML = `
         <div class="flex justify-between items-center text-secondary">
-          <a class="text-secondary" href="#">About</a>
+          <a class="text-secondary" href="#" data-path="/about">About</a>
           <div>&lt;a&gt;</div>
         </div>
-        <div class="flex justify-between items-center text-disabled">
-          <div>Blog</div>
+        <div class="flex justify-between items-center text-secondary">
+          <a class="text-secondary" href="#" data-path="/blog">Blog</a>
           <div>&lt;b&gt;</div>
         </div>
         <div class="flex justify-between items-center text-secondary">
