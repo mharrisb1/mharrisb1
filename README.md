@@ -1,6 +1,6 @@
 ## Michael Harris
 
-Currently full-time at [Outside Analytics + SMX](https://www.outsideanalytics.com) on the [🛰️ Space & Intel](https://www.smxtech.com/solutions/mission-operations-and-intelligence) team where I work on building low-latency emulators for realistic system testing.
+Currently full-time at [Outside Analytics + SMX](https://www.outsideanalytics.com) on the [🛰️ Space & Intel](https://www.smxtech.com/solutions/mission-operations-and-intelligence) team.
 
 ### On the Web
 
