@@ -2,6 +2,10 @@
 
 Currently full-time at [Outside Analytics + SMX](https://www.outsideanalytics.com) on the [🛰️ Space & Intel](https://www.smxtech.com/solutions/mission-operations-and-intelligence) team.
 
+### Latest Blog Posts
+
+- [State Machine Tuning: 850x performance improvement](https://mharrisb1.dev/#/blog?id=java-state-machine-optimizations)
+
 ### On the Web
 
 - [GitHub](https://github.com/mharrisb1)
