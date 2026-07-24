@@ -50,6 +50,9 @@ class ContentWindow extends HTMLElement {
 
     if (contentCache.has(src)) {
       container.innerHTML = contentCache.get(src);
+      if (window.hljs) {
+        container.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+      }
       return;
     }
 
@@ -59,6 +62,9 @@ class ContentWindow extends HTMLElement {
         const html = await response.text();
         contentCache.set(src, html);
         container.innerHTML = html;
+        if (window.hljs) {
+          container.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+        }
       } else {
         container.innerHTML = `<span class="text-accent">Failed to load content.</span>`;
       }
