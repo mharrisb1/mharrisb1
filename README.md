@@ -4,7 +4,7 @@ Currently full-time at [Outside Analytics + SMX](https://www.outsideanalytics.co
 
 ### Latest Blog Posts
 
-- [State Machine Tuning: 850x performance improvement](https://mharrisb1.dev/#/blog?id=java-state-machine-optimizations)
+- [State Machine Tuning: 850% Performance Improvement](https://mharrisb1.dev/#/blog?id=java-state-machine-optimizations)
 
 ### On the Web
 
