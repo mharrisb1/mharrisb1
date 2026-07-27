@@ -1,9 +1,10 @@
 [
   {
     "id": "java-state-machine-optimizations",
-    "title": "State Machine Tuning: 850x performance improvement",
+    "title": "State Machine Tuning: 850% Performance Improvement",
     "date": "2026-07-20",
     "blurb": "Illustrating how to tune state machine performance in Java using JMH to profile information such as allocations, branch misses, and cache misses.",
+    "thumbnail": "/assets/state_machine_perf.png",
     "tags": ["java", "performance"]
   }
 ]
