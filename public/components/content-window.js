@@ -50,9 +50,7 @@ class ContentWindow extends HTMLElement {
 
     if (contentCache.has(src)) {
       container.innerHTML = contentCache.get(src);
-      if (window.hljs) {
-        container.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-      }
+      this.processContent(container);
       return;
     }
 
@@ -62,15 +60,33 @@ class ContentWindow extends HTMLElement {
         const html = await response.text();
         contentCache.set(src, html);
         container.innerHTML = html;
-        if (window.hljs) {
-          container.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
-        }
+        this.processContent(container);
       } else {
         container.innerHTML = `<span class="text-accent">Failed to load content.</span>`;
       }
     } catch (_) {
       container.innerHTML = `<span class="text-accent">Error loading content.</span>`;
     }
+  }
+
+  processContent(container) {
+    if (window.hljs) {
+      container.querySelectorAll('pre code').forEach(block => hljs.highlightElement(block));
+    }
+    container.querySelectorAll('table').forEach(table => {
+      if (!table.parentElement.classList.contains('table-wrapper')) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'table-wrapper';
+        table.parentNode.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+      }
+    });
+    container.querySelectorAll('script').forEach(oldScript => {
+      const newScript = document.createElement('script');
+      Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+      newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+      oldScript.parentNode.replaceChild(newScript, oldScript);
+    });
   }
 
   disconnectedCallback() {
