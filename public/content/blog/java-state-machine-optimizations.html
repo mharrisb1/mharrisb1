@@ -1,25 +1,10 @@
 <div class="space-y-6">
-  <h1 class="text-xl font-bold text-accent">
-    State Machine Tuning: 850% Performance Improvement
-  </h1>
+  <h1>State Machine Tuning: 850% Performance Improvement</h1>
   <p class="text-secondary">2026-07-20</p>
   <div class="text-primary space-y-4">
-    <h2 class="text-lg font-bold text-accent">What we're building</h2>
+    <h2>What we're building</h2>
     <p>
-      I'm not going to give an academic overview of state machines or even
-      present any useful insights about them because I'm not remotely qualified
-      to do so. So if you want to dive deeper into the topic then ask some LLM
-      -- or even better go to the
-      <a
-        href="https://en.wikipedia.org/wiki/Finite-state_machine"
-        target="_blank"
-        >Wikipedia page</a
-      >
-      and benefit from that sweet, free open-source knowledge the internet
-      promised us.
-    </p>
-    <p>
-      The state machine we're going to be using as a strawman is one that I
+      The state machine we're going to be using as an example is one that I
       actually need for a future blog post going over optimizing sets in Python.
       For that post, I want to display an interactive graphic of a Venn diagram
       where the user can click either set
@@ -29,18 +14,10 @@
         <mi>A</mi>
         <mo>&cap;</mo>
         <mi>B</mi> </math
-      >. Those are the valid inputs to the machines. Starting with the initial
-      state of <math><mi>&empty;</mi></math
+      >. We treat those as the valid inputs to the machine. Starting with the
+      initial state of <math><mi>&empty;</mi></math
       >, given just those 3 inputs we can span a total of 8 possible states.
     </p>
-    <p>
-      More details than that are not really necessary for this post. If you're
-      interested, I will just link the eventual blog post here. For this
-      exercise, I'm using Java instead of JavaScript (which this will be ported
-      to) because Java gives us a more mature benchmarking suite and better
-      performance. I also just like Java.
-    </p>
-    <p>The last thing we need know is the states:</p>
     <table>
       <thead>
         <tr>
@@ -109,25 +86,23 @@
       </tbody>
     </table>
 
-    <h2 class="text-lg font-bold text-accent">Initial implementation</h2>
+    <h2>Initial implementation</h2>
     <p>
-      It's cliche to pick
+      It's cliche to pick on
       <a href="https://en.wikipedia.org/wiki/Design_Patterns" target="_blank"
         >Gang of Four Design Patterns</a
       >, but unlike others who do it I:
     </p>
     <ol>
-      <li>Understand that I know very little and am not smart than them</li>
+      <li>Understand that I know very little and am not smarter than them</li>
       <li>
         Understand that what those patterns optimize for is maintaining large
         scale, industrial codebases
       </li>
     </ol>
     <p>
-      Still, here goes another sloppy blog post that's going to use one of these
-      patterns as a counterexample to performant, data-oriented programming. So
-      with my best Casey Muratori impression, here is this dog shit first
-      implementation of our state machine.
+      Still, I'm going to start with a design that you've probably used in your
+      codebase or have at least seen a few times.
     </p>
     <pre><code class="language-java" style="max-height: 400px; overflow-y: auto; border-radius: 6px;">
 public enum Input { CLICK_A, CLICK_B, CLICK_N }             // our 3 input options
@@ -177,17 +152,16 @@ public class Fsm {
     </code></pre>
     <p>
       Admittedly, this isn't even bad looking code, and if you just needed a
-      state machine that has no non-functional requirements around performance,
-      then this is fine. You could get hit by a bus tomorrow and the poor junior
-      engineer that has to deal with your garbage code can look at this and know
-      what's going on.
+      state machine that has no requirements around performance, then this is
+      fine. You could get hit by a bus tomorrow and the poor junior engineer
+      that has to deal with your code can look at this and know what's going on.
     </p>
     <p>
       If you do need a high-performance state machine then this design pattern
       should immediately be ruled out. Let's look at some data.
     </p>
 
-    <h2 class="text-lg font-bold text-accent">Our contrived benchmark</h2>
+    <h2>Our starting point: the initial benchmark results</h2>
     <p>
       I set up a benchmark to test our state machine designs against a purely
       ficticious scenario of needing to handle 10 million inputs as fast as
@@ -201,10 +175,7 @@ public class Fsm {
     </p>
     <p>
       However, this example state machine serves as a good proxy for a machine
-      you might have to write for processing network traffic, deterministically
-      handling user inputs and state transitions in an online game, etc. We'll
-      get to another one this state machines good properties that will allow us
-      to tune it more than we could with other potential state machines.
+      you might have to write for other domains.
     </p>
     <p>
       Using OpenJDK's
@@ -253,10 +224,6 @@ public class Benchmark {
   }
 }  
     </code></pre>
-
-    <h2 class="text-lg font-bold text-accent">
-      Our starting point: the initial benchmark results
-    </h2>
     <p>
       JMH provides many useful stats, but we're going to focus on four main
       ones:
@@ -315,24 +282,16 @@ public class Benchmark {
       </li>
     </ul>
 
-    <h2 class="text-lg font-bold text-accent">
-      Tuning Part 1: Focus on allocations
-    </h2>
+    <h2>Tuning Part 1: Focus on allocations</h2>
     <p>
-      The main thing we should keep in mind as we tune our state machine is that
-      the north star is increasing the ops/s metric. However, that is a lagging
-      metric. We can really only improve that number by improving the others.
-      So, first up let's focus on those 16 bytes being allocated per operation.
+      The main thing we're trying to achieve here is higher throughput. However,
+      that is a lagging metric. We can really only improve that number by
+      improving the others. So, first up let's focus on those 16 bytes being
+      allocated per operation. Since this is Java, they are also being allocated
+      on the heap instead of the stack. Not only that, but we have to also track
+      and garbage collect that memory.
     </p>
-    <p>
-      We should all know that Java will generally allocate objects on the heap
-      which has a much higher cost than allocating to the stack. This is why 16
-      B/op is such a drag on our throughput. Not only that, but we have to also
-      track and garbage collect that memory resulting in frequent, expensive
-      stops to the program. Anyone who has ever viewed those nasty periodic
-      spikes in a Grafana dashboard knows how problematic this can be.
-    </p>
-    <p>We can also perfectly reason about what those 16 bytes are:</p>
+    <p>Here's what those 16 bytes are:</p>
     <table>
       <thead>
         <tr>
@@ -363,8 +322,9 @@ public class Benchmark {
       </tbody>
     </table>
     <p>
-      In general, the less allocations we do the better, especially in a hot
-      loop. This will be the first thing we focus on for refactoring.
+      So all of those allocations aren't even really useful since they are
+      entirely metadata. Avoiding these allocations will be our first area of
+      focus.
     </p>
     <p>
       To avoid allocating a new object for every transition we'll move away from
@@ -401,17 +361,7 @@ public class Fsm {
   }
 }
     </code></pre>
-    <p>
-      This implementation will avoid allocations entirely other than the main
-      <code>Fsm</code> class initialization which isn't even included in the
-      benchmark.
-    </p>
-    <p>
-      We should explicitly call out that creating all of those nested
-      switch-case statements is cumbersome and error prone. That is exactly why
-      for larger projects, the Gang of Four pattern is generally worth the
-      performance hit. Still, let's keep going and see the results:
-    </p>
+    <p>Let's see the results:</p>
     <table>
       <thead>
         <tr>
@@ -450,44 +400,28 @@ public class Fsm {
     </table>
     <p>
       Look at that, we've already almost doubled our throughput and we can see
-      that we've completely eliminated the bytes allocted per operation. This is
-      a huge leap in performance and we could easily stay here and call it a
-      day, but what fun would that be?
+      that we've completely eliminated the bytes allocted per operation.
     </p>
 
-    <h2 class="text-lg font-bold text-accent">
-      Tuning Part 2: What about those branch misses?
-    </h2>
-    <p>
-      Before I go any deeper, modern hardware is incredibly complex and our
-      mental models of how they <i>actually</i> work is probably not as great as
-      we think. I say that because I do not know exactly how the complex
-      execution pipelines work. If I did, I would have been able to write
-      exploits like
-      <a href="https://meltdownattack.com" target="_blank">these</a>. Treat this
-      as a blanked CYA for what I'm about to say next.
-    </p>
+    <h2>Tuning Part 2: What about those branch misses?</h2>
     <p>
       Modern CPUs try to run as fast as physically possible. As we hit physical
       limits we start to introduce neat tricks to extract even more performance.
       One of those tricks is that a CPU will start working on the next
-      instruction (or several) before the previous one is finished. This can be
-      super helpful, but sometimes it can actually be hurtful to performance.
+      instruction (or several instructions!) before the previous one is
+      finished. This can be super helpful, but sometimes it can actually be
+      harmful to performance.
     </p>
     <p>
       When the CPU reaches an instruction that causes a branch (<code>if</code>,
-      <code>switch</code>, etc.), then the CPU needs to guess, or to give it a
-      facade of authority, predict, which way to go for the branch. Thanks to
-      the mathematical prowess of some truly impressive engineers and
-      scientists, we're can predict reasonably well, but sometime we get it
-      wrong and that is called a "branch miss". This results in the CPU having
-      to back track and go back down the correct branch before continuing.
+      <code>switch</code>, etc.), then the CPU needs to predict which way to go.
+      CPUs can predict reasonably well, but sometime it will be wrong and have
+      to back track. This is called a "branch miss".
     </p>
     <p>
-      Taking a look at the new state machine implementation we have, you can
-      probably guess that all those nested switch statements give the CPU a hard
-      time. What we want to do it use a design that eliminates branching
-      entirely.
+      Taking a look at this implementation, you can probably guess that all
+      those nested switch statements give the CPU a hard time. What we want to
+      do it use a design that eliminates branching entirely.
     </p>
     <p>
       For our next refactor, we'll use a
@@ -495,7 +429,7 @@ public class Fsm {
         href="https://en.wikipedia.org/wiki/State-transition_table"
         target="_blank"
         >state table</a
-      >. For our state machine, we can represent it as a 2D table:
+      >. We can represent our state machine as a 2D table:
     </p>
     <table>
       <thead>
@@ -576,7 +510,7 @@ public final class FsmConstants {
   public static final int SYMDIFF = 7;
 
   private FsmConstants() {
-  } // Prevent instantiation
+  }
 }
 
 public class Fsm {
@@ -608,28 +542,18 @@ public class Fsm {
   }
 }
     </code></pre>
-    <p>
-      This code is quite simple and compact to the point where I included the
-      entire snippet above. A few small notes to make are:
-    </p>
+    <p>This code is quite simple and compact. A few things to call out:</p>
     <ol>
       <li>
-        We dropped the enums and went write to constant static integers. This
+        We dropped the enums and instead use constant static integers. This
         avoids the call to enum's <code>ordinal()</code> method.
       </li>
       <li>
         I still kept the <code>getState()</code> return type the same since it's
         not in the benchmark's hot path.
       </li>
-      <li>
-        The input list in benchmark is now comprised of integers instead of enum
-        values.
-      </li>
     </ol>
-    <p>
-      Now let's see how it performed relative to our initial implemenation and
-      our first refactor:
-    </p>
+    <p>Now let's see how it performed:</p>
     <table>
       <thead>
         <tr>
@@ -672,6 +596,337 @@ public class Fsm {
     </table>
     <p>
       Incredible. A 5x increase and we've virtually eliminated branch misses.
+      One last refactor to do.
+    </p>
+
+    <h2>Tuning Part 3: Cache me if you can</h2>
+    <p>
+      A resource to definitely familiarize yourself with is Jeff Dean's "<a
+        href="https://www.cs.cornell.edu/projects/ladis2009/talks/dean-keynote-ladis2009.pdf"
+        target="_blank"
+        >latency numbers every programmer should know</a
+      >" (slide 24). Though the exact figures might be slightly different today,
+      the orders of magnitude are still the same. Here is a slimmed down version
+      that shows the relevant numbers for us:
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Operation</th>
+          <th>Latency</th>
+          <th>Scaled to Human Time (1ns = 1 sec)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="text-accent font-bold">CPU Register</td>
+          <td>~0.3 ns</td>
+          <td>0.3 seconds</td>
+        </tr>
+        <tr>
+          <td class="text-accent font-bold">L1 Cache</td>
+          <td>~0.5 ns</td>
+          <td>0.5 seconds</td>
+        </tr>
+        <tr>
+          <td class="text-accent font-bold">L2 Cache</td>
+          <td>~7 ns</td>
+          <td>7 seconds</td>
+        </tr>
+        <tr>
+          <td class="text-accent font-bold">Main Memory (RAM)</td>
+          <td>~100 ns</td>
+          <td>100 seconds (1.5 mins)</td>
+        </tr>
+        <tr>
+          <td class="text-accent font-bold">Solid State Drive (SSD)</td>
+          <td>~150,000 ns (150 &mu;s)</td>
+          <td>1.7 days</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      As you can see, everytime you have to go to the next ladder of the memory
+      hierarchy you are incurring a huge cost. For performance, you want you
+      program to be "cache-friendly", which means that it rarely needs to reach
+      beyond L1 cache (or even registers!) for performance critical code.
+    </p>
+    <p>
+      The final refactor we'll do will take advantage of how fast register and
+      L1 cache access are.
+    </p>
+    <p>
+      Now for our 2D table approach, we're actually doing a good job at reducing
+      L1 cache misses but that's actually coincidental. Unlike C and C++ where
+      if you have a 2D array the memory is laid out contiguosly, in Java a list
+      of lists is actually a list of pointers to contiguous blocks on the heap.
+    </p>
+    <h3>C/C++ 2D Array Memory Layout</h3>
+    <pre><code class="language-text" style="max-height: 400px; overflow-y: auto; border-radius: 6px;">
++-------+-------+-------+-------+-------+-------+
+| [0,0] | [0,1] | [0,2] | [1,0] | [1,1] | [1,2] |
++-------+-------+-------+-------+-------+-------+
+<----------------- Contiguous Memory ----------->
+    </code></pre>
+
+    <h3>Java 2D Array Memory Layout (Array of Arrays)</h3>
+    <pre><code class="language-text" style="max-height: 400px; overflow-y: auto; border-radius: 6px;">
+Outer Array (Heap)
++---------+---------+
+| Index 0 | Index 1 |
++----|----+----|----+
+     |         |
+     |         +---------------------------+
+     |                                     |
+     v                                     v
+Inner Array 0 (Heap)                   Inner Array 1 (Heap)
++-------+-------+-------+              +-------+-------+-------+
+| [0,0] | [0,1] | [0,2] |              | [1,0] | [1,1] | [1,2] |
++-------+-------+-------+              +-------+-------+-------+
+    </code></pre>
+    <p>
+      We're not heavily penalized by this misdirection that much (at least in
+      terms of L1 cache misses) here because the first time we fetch the outer
+      array and then the inner arrays and bring them to L1 cache, they are small
+      enough to easily fit. If you have a list of lists that is larger than our
+      example then this might not be the case.
+    </p>
+    <p>
+      Where this misdirection does hurt us is having to move back and forth due
+      to the pointers. Everytime we have a new state transition, we need to
+      chase the pointer from the outer array to one of the inner arrays and then
+      get the value we need. This results in having to fetch the value stored in
+      L1 cache that is behind the pointer.
+    </p>
+    <p>
+      To avoid this need for pointer chasing without porting to a language like
+      C++ we can flatten the 2D table to a 1D table like this:
+    </p>
+    <pre><code class="language-text" style="max-height: 400px; overflow-y: auto; border-radius: 6px;">
+        +-------+
+  [ 0 ] | [0,0] |
+        +-------+
+  [ 1 ] | [0,1] |
+        +-------+
+  [ 2 ] | [0,2] |
+        +-------+
+  [ 3 ] | [1,0] |
+        +-------+
+  [ 4 ] | [1,1] |
+        +-------+
+            .
+            .
+            .
+        +-------+
+  [23 ] | [7,2] |
+        +-------+
+    </code></pre>
+    <p>
+      For our state machine, now when we have a new input we simply use the
+      formula <code>(currentState * 3) + input</code>. Here is the code:
+    </p>
+    <pre><code class="language-java" style="max-height: 400px; overflow-y: auto; border-radius: 6px;">
+// Same use of constants over enums as before
+public final class FsmConstants { ... }
+
+public class Fsm {
+  private static final int NUM_INPUTS = 3;
+
+  private static final int[] STATE_TABLE = {
+      /* NULLSET */ INTERSECT, SET_A, SET_B,
+      /* INTERSECT */ NULLSET, SET_A, SET_B,
+      /* SET_A */ A_DIFF_B, NULLSET, UNION,
+      /* SET_B */ B_DIFF_A, UNION, NULLSET,
+      /* A_DIFF_B */ SET_A, NULLSET, SYMDIFF,
+      /* B_DIFF_A */ SET_B, SYMDIFF, NULLSET,
+      /* UNION */ SYMDIFF, SET_B, SET_A,
+      /* SYMDIFF */ UNION, B_DIFF_A, A_DIFF_B
+  };
+
+  private int currentState;
+
+  public Fsm() {
+    this.currentState = NULLSET;
+  }
+
+  public void transition(int input) {
+    currentState = STATE_TABLE[(currentState * NUM_INPUTS) + input];
+  }
+
+  public State getState() {
+    return State.values()[currentState];
+  }
+}
+    </code></pre>
+    <p>After running te final benchmark we get these results:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>GoF (Initial)</th>
+          <th>Switch-Case</th>
+          <th>2D Array</th>
+          <th>1D Array</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="font-bold text-accent">Throughput</td>
+          <td>73,440,877 ops/s</td>
+          <td>
+            134,087,417 ops/s <br /><span style="color: #4ade80">+82.6%</span>
+          </td>
+          <td>
+            443,323,204 ops/s <br /><span style="color: #4ade80">+503.6%</span>
+          </td>
+          <td>
+            695,174,019 ops/s <br /><span style="color: #4ade80">+846.6%</span>
+          </td>
+        </tr>
+        <tr>
+          <td class="font-bold text-accent">Allocations</td>
+          <td>16.000 B/op</td>
+          <td>~ 0 B/op <br /><span style="color: #4ade80">-100%</span></td>
+          <td>~ 0 B/op <br /><span style="color: #4ade80">-100%</span></td>
+          <td>~ 0 B/op <br /><span style="color: #4ade80">-100%</span></td>
+        </tr>
+        <tr>
+          <td class="font-bold text-accent">Branch Misses</td>
+          <td>1.212 /op</td>
+          <td>0.717 /op <br /><span style="color: #4ade80">-40.8%</span></td>
+          <td>0.001 /op <br /><span style="color: #4ade80">-99.9%</span></td>
+          <td>0.001 /op <br /><span style="color: #4ade80">-99.9%</span></td>
+        </tr>
+        <tr>
+          <td class="font-bold text-accent">L1 D-Cache Misses</td>
+          <td>0.337 /op</td>
+          <td>0.067 /op <br /><span style="color: #4ade80">-80.1%</span></td>
+          <td>0.064 /op <br /><span style="color: #4ade80">-81.0%</span></td>
+          <td>0.063 /op <br /><span style="color: #4ade80">-81.3%</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      There's our final result: a roughly 850% improvement. Thanks to avoiding
+      having to go all the way out to L1 cache (and some help from more pipeline
+      execution friendly 1D array) we've improved our performance by almost a
+      full order of magnitude.
+    </p>
+
+    <h2>Wrapping up</h2>
+    <div
+      id="benchmark-chart-container"
+      style="
+        width: 100%;
+        height: 400px;
+        margin-top: 1.5rem;
+        margin-bottom: 2rem;
+      "
+    ></div>
+    <script>
+      (function () {
+        const renderChart = () => {
+          const container = document.getElementById(
+            "benchmark-chart-container",
+          );
+          if (!container) return;
+          const chart = echarts.init(container);
+
+          const getVar = (name) =>
+            getComputedStyle(document.body).getPropertyValue(name).trim();
+          const colorZinc = getVar("--color-zinc") || "#c2c2c2";
+          const colorBlue = getVar("--color-blue") || "#3691f9";
+          const colorWhite = getVar("--color-white") || "#ffffff";
+          const fontFamily = '"JetBrains Mono", monospace';
+
+          chart.setOption({
+            backgroundColor: "transparent",
+            tooltip: {
+              trigger: "axis",
+              axisPointer: { type: "shadow" },
+              formatter: (params) => {
+                const val = params[0].value.toLocaleString() + " ops/s";
+                return `${params[0].name}<br/><b style="color: ${colorBlue};">${val}</b>`;
+              },
+            },
+            grid: {
+              left: "2%",
+              right: "4%",
+              bottom: "3%",
+              top: "12%",
+              containLabel: true,
+            },
+            xAxis: {
+              type: "category",
+              data: ["GoF", "Switch-Case", "2D Array", "1D Array"],
+              axisLabel: {
+                color: colorZinc,
+                fontFamily: fontFamily,
+                fontSize: 13,
+              },
+              axisLine: { lineStyle: { color: colorZinc } },
+              axisTick: { show: false },
+            },
+            yAxis: {
+              type: "value",
+              name: "Throughput (ops/s)",
+              nameTextStyle: {
+                color: colorZinc,
+                fontFamily: fontFamily,
+                padding: [0, 0, 0, 40],
+              },
+              axisLabel: {
+                color: colorZinc,
+                fontFamily: fontFamily,
+                formatter: (value) => {
+                  if (value >= 1000000) return value / 1000000 + "M";
+                  return value;
+                },
+              },
+              splitLine: { lineStyle: { color: colorZinc, opacity: 0.15 } },
+            },
+            series: [
+              {
+                name: "Throughput",
+                type: "bar",
+                data: [73440877, 134087417, 443323204, 695174019],
+                barWidth: "50%",
+                itemStyle: { color: colorBlue, borderRadius: [4, 4, 0, 0] },
+              },
+            ],
+          });
+
+          window.addEventListener("resize", () => chart.resize());
+        };
+
+        if (window.echarts) {
+          renderChart();
+        } else {
+          const script = document.createElement("script");
+          script.src =
+            "https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js";
+          script.onload = renderChart;
+          document.head.appendChild(script);
+        }
+      })();
+    </script>
+    <p>
+      By understanding what values help or hurt througput, you can intentionally
+      refactor your code to improve those numbers. For us, we understood that
+      focusing on three major costs (memory allocation, branch misses, and L1
+      cache misses), we could dramatically improve the performance of our code.
+      This type of machine empathy and the ability to squeeze out as much as you
+      can of the machine is incredibly powerful and can save your business (and
+      the environment!) a great deal over the long run.
+    </p>
+    <p>
+      You can see the full code and benchmark results
+      <a
+        href="https://github.com/mharrisb1/faster-state-machines/blob/main/java"
+        ,
+        target="_blank"
+        >here</a
+      >.
     </p>
   </div>
 </div>
