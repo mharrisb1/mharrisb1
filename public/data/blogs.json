@@ -4,7 +4,8 @@
     "title": "Improving Set Performance in Python",
     "date": "2026-07-27",
     "blurb": "Exploring how to improve performance when using sets in Python by exploring standard library options, third party options, CPython, and special optimizations.",
-    "tags": ["python", "performance"]
+    "tags": ["python", "performance"],
+    "draft": true
   },
   {
     "id": "java-state-machine-optimizations",
