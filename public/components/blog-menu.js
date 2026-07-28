@@ -3,9 +3,11 @@ class BlogMenu extends HTMLElement {
     this.innerHTML = `<div class="text-secondary">Loading blogs...</div>`;
     try {
       const response = await fetch("/data/blogs.json");
-      const blogs = await response.json();
+      let blogs = await response.json();
 
-      blogs.sort((a, b) => new Date(b.date) - new Date(a.date));
+      blogs = blogs
+        .filter((b) => !b.draft)
+        .toSorted((a, b) => new Date(b.date) - new Date(a.date));
 
       this.innerHTML = `
         <div class="space-y-6 w-full">
@@ -26,7 +28,7 @@ class BlogMenu extends HTMLElement {
                       ${blog.tags.map((tag) => `<span class="bg-primary text-secondary px-2 py-1" style="font-size: 0.875rem;">#${tag}</span>`).join("")}
                     </div>
                   </div>
-                  ${blog.thumbnail ? `<img src="${blog.thumbnail}" style="width: 240px; height: 135px; object-fit: cover; border-radius: 6px; border: 1px solid var(--color-zinc); flex-shrink: 0;" />` : ''}
+                  ${blog.thumbnail ? `<img src="${blog.thumbnail}" style="width: 240px; height: 135px; object-fit: cover; border-radius: 6px; border: 1px solid var(--color-zinc); flex-shrink: 0;" />` : ""}
                 </div>
               </div>
             `,
