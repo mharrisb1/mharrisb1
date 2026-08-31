@@ -6,7 +6,7 @@ Currently full-time at [Outside Analytics + SMX](https://www.outsideanalytics.co
 
 - [GitHub](https://github.com/mharrisb1)
 - [LinkedIn](https://linkedin.com/in/mharrisb1)
-- [Mastadon](https://mastodon.social/@mharrisb1)
+- [Mastodon](https://mastodon.social/@mharrisb1)
 - [Website](https://mharrisb1.dev)
 
 ### IRL
