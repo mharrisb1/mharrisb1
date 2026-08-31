@@ -4,82 +4,182 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>mharrisb1.dev</title>
-    <link rel="icon" href="data:;base64,iVBORw0KGgo=" />
-    <link rel="stylesheet" href="/styles/index.css" />
-    <link rel="stylesheet" href="/styles/atom-one-dark.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
-    <script src="/scripts/highlight.min.js"></script>
-    <script type="module" src="/components/clock.js"></script>
-    <script type="module" src="/components/menu.js"></script>
-    <script type="module" src="/components/content-window.js"></script>
-    <script type="module" src="/components/blog-menu.js"></script>
+    <style>
+      :root {
+        --bg-canvas: #000;
+        --text-main: #fff;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        background-color: var(--bg-canvas);
+        color: var(--text-main);
+        min-height: 100dvh;
+        display: grid;
+        place-content: center;
+        padding: 24px;
+      }
+      a {
+        text-decoration: none;
+        color: var(--text-main);
+      }
+      .container {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+        justify-content: center;
+        align-items: center;
+      }
+      .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+      .location {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: small;
+      }
+      .socials {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+      }
+    </style>
+    <script
+      src="https://kit.fontawesome.com/5a9a9fda68.js"
+      crossorigin="anonymous"
+    ></script>
   </head>
   <body>
-    <div class="bg-primary flex">
-      <div class="bg-accent px-2 py-1 font-bold">mharrisb1.dev</div>
-    </div>
-    <div
-      id="content"
-      class="flex-1 flex justify-center items-center"
-      style="min-height: 0"
-    >
-      <app-menu id="menu" class="w-1/3 border px-12 py-8 space-y-6"> </app-menu>
-    </div>
-    <div class="bg-primary flex justify-between">
-      <div class="px-2 py-1">NOR</div>
-      <app-clock id="clock" class="bg-accent px-2 py-1"></app-clock>
+    <div class="container">
+      <div class="header">
+        <p>Michael Harris</p>
+        <div class="location">
+          <i class="fa-solid fa-location-dot"></i>
+          <p>40.0190° N, 105.2753° W</p>
+        </div>
+      </div>
+      <canvas id="game-of-life"></canvas>
+      <div class="socials">
+        <a href="https://github.com/mharrisb1" target="_blank">
+          <i class="fa-brands fa-github"></i>
+        </a>
+        <a href="https://linkedin.com/in/mharrisb1/" target="_blank">
+          <i class="fa-brands fa-linkedin"></i>
+        </a>
+        <a href="https://mastodon.social/@mharrisb1" target="_blank">
+          <i class="fa-brands fa-mastodon"></i>
+        </a>
+        <a href="https://substack.com/@mharrisb1dev" target="_blank">
+          <i class="fa-brands fa-substack"></i>
+        </a>
+        <a href="https://youtube.com/@michaelharris1370" target="_blank">
+          <i class="fa-brands fa-youtube"></i>
+        </a>
+        <a href="https://strava.app.link/MpyelxNG35b" target="_blank">
+          <i class="fa-brands fa-strava"></i>
+        </a>
+      </div>
     </div>
     <script>
-      const contentDiv = document.getElementById("content");
+      const canvas = document.getElementById("game-of-life");
+      const ctx = canvas.getContext("2d");
 
-      const renderRoute = () => {
-        const hash = window.location.hash.replace(/^#/, "") || "/";
-        const [path, queryString] = hash.split("?");
-        const params = new URLSearchParams(queryString || "");
+      const CELL_SIZE = 10;
+      const COLS = 36;
+      const ROWS = 36;
 
-        if (path === "/about") {
-          document.title = "About | mharrisb1.dev";
-          contentDiv.innerHTML = `<content-window class="w-full h-full flex flex-col" style="align-self: stretch;" src="/content/about.html"></content-window>`;
-        } else if (path === "/blog") {
-          const id = params.get("id");
-          if (id) {
-            document.title = `${id} | mharrisb1.dev`;
-            contentDiv.innerHTML = `<content-window class="w-full h-full flex flex-col" style="align-self: stretch;" src="/content/blog/${id}.html"></content-window>`;
-          } else {
-            document.title = `Blog | mharrisb1.dev`;
-            contentDiv.innerHTML = `<content-window class="w-full h-full flex flex-col" style="align-self: stretch;" src="/content/blog-menu.html"></content-window>`;
+      canvas.width = COLS * CELL_SIZE;
+      canvas.height = ROWS * CELL_SIZE;
+
+      function buildGrid() {
+        return new Array(COLS).fill(null).map(() => new Array(ROWS).fill(0));
+      }
+
+      let currentGrid = buildGrid();
+      let nextGrid = buildGrid();
+
+      for (let col = 0; col < COLS; col++) {
+        for (let row = 0; row < ROWS; row++) {
+          currentGrid[col][row] = Math.floor(Math.random() * 2);
+        }
+      }
+
+      function update() {
+        computeNextGen();
+
+        let temp = currentGrid;
+        currentGrid = nextGrid;
+        nextGrid = temp;
+
+        render(currentGrid);
+        setTimeout(() => requestAnimationFrame(update), 500);
+      }
+
+      function computeNextGen() {
+        for (let col = 0; col < COLS; col++) {
+          for (let row = 0; row < ROWS; row++) {
+            const cell = currentGrid[col][row];
+            let numNeighbors = 0;
+
+            for (let i = -1; i < 2; i++) {
+              for (let j = -1; j < 2; j++) {
+                if (i === 0 && j === 0) continue;
+                const x_cell = col + i;
+                const y_cell = row + j;
+
+                if (
+                  x_cell >= 0 &&
+                  y_cell >= 0 &&
+                  x_cell < COLS &&
+                  y_cell < ROWS
+                ) {
+                  numNeighbors += currentGrid[x_cell][y_cell];
+                }
+              }
+            }
+
+            if (cell === 1 && numNeighbors < 2) nextGrid[col][row] = 0;
+            else if (cell === 1 && numNeighbors > 3) nextGrid[col][row] = 0;
+            else if (cell === 0 && numNeighbors === 3) nextGrid[col][row] = 1;
+            else nextGrid[col][row] = cell;
           }
-        } else {
-          document.title = "mharrisb1.dev";
-          contentDiv.innerHTML = `<app-menu id="menu" class="w-1/3 border px-12 py-8 space-y-6"></app-menu>`;
         }
-      };
+      }
 
-      document.addEventListener("navigate", (e) => {
-        const path = e.detail.path || "/";
-        if (window.location.hash === `#${path}`) {
-          renderRoute();
-        } else {
-          window.location.hash = path;
+      function render(grid) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "rgb(255, 255, 255)";
+        for (let col = 0; col < COLS; col++) {
+          for (let row = 0; row < ROWS; row++) {
+            if (grid[col][row]) {
+              ctx.fillRect(
+                col * CELL_SIZE,
+                row * CELL_SIZE,
+                CELL_SIZE - 1,
+                CELL_SIZE - 1,
+              );
+            }
+          }
         }
-      });
+      }
 
-      document.addEventListener("close-window", () => {
-        const hash = window.location.hash.replace(/^#/, "") || "/";
-        const [path, queryString] = hash.split("?");
-        const params = new URLSearchParams(queryString || "");
-
-        if (path === "/blog" && params.has("id")) {
-          window.location.hash = "/blog";
-        } else {
-          window.location.hash = "/";
-        }
-      });
-
-      window.addEventListener("hashchange", renderRoute);
-
-      // Initial load
-      renderRoute();
+      requestAnimationFrame(update);
     </script>
   </body>
 </html>
